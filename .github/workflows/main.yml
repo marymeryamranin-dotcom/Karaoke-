@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Super Android Builder
 on:
   push:
     branches: [ "main" ]
@@ -7,15 +7,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+
     - name: set up JDK 17
       uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
-    - name: Build with Gradle
-      run: ./gradlew assembleDebug
+
+    - name: Generate Full Android Project Structure
+      run: |
+        mkdir -p app/src/main/java/com/example/ui/screens
+        mkdir -p app/src/main/java/com/example/ui/theme
+        mkdir -p app/src/main/java/com/example/data/db
+        mkdir -p app/src/main/java/com/example/data/repository
+        mkdir -p app/src/main/java/com/example/viewmodel
+        mkdir -p app/src/main/res/values
+        mkdir -p app/src/main/res/drawable
+        
+        mv AppDatabase.kt app/src/main/java/com/example/data/db/ 2>/dev/null || true
+        mv KaraokeRepository.kt app/src/main/java/com/example/data/repository/ 2>/dev/null || true
+        mv KaraokeViewModel.kt app/src/main/java/com/example/viewmodel/ 2>/dev/null || true
+        mv Color.kt Theme.kt app/src/main/java/com/example/ui/theme/ 2>/dev/null || true
+        mv KaraokeScreens.kt app/src/main/java/com/example/ui/screens/ 2>/dev/null || true
+        mv MainActivity.kt app/src/main/java/com/example/ 2>/dev/null || true
+        mv AndroidManifest.xml app/src/main/ 2>/dev/null || true
+        mv strings.xml app/src/main/res/values/ 2>/dev/null || true
+        mv ic_launcher* app/src/main/res/drawable/ 2>/dev/null || true
+        mv metadata.json app/src/main/res/ 2>/dev/null || true
+
+        curl -s https://raw.githubusercontent.com/android/architecture-samples/main/build.gradle.kts -o build.gradle.kts
+        curl -s https://raw.githubusercontent.com/android/architecture-samples/main/app/build.gradle.kts -o app/build.gradle.kts
+        curl -s https://raw.githubusercontent.com/android/architecture-samples/main/settings.gradle.kts -o settings.gradle.kts
+        gradle wrapper
+
+    - name: Run Build
+      run: |
+        chmod +x gradlew
+        ./gradlew assembleDebug --no-daemon
+
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: KaraokeAPK
-        path: app/build/outputs/apk/debug/app-debug.apk
+        name: KaraokeStudioApp
+        path: "**/build/outputs/apk/debug/*.apk"
