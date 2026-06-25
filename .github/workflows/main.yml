@@ -1,4 +1,4 @@
-name: Super Android Builder
+name: Build Android APK
 on:
   push:
     branches: [ "main" ]
@@ -14,39 +14,52 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Generate Full Android Project Structure
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Organize Files Into App Module
       run: |
-        mkdir -p app/src/main/java/com/example/ui/screens
-        mkdir -p app/src/main/java/com/example/ui/theme
-        mkdir -p app/src/main/java/com/example/data/db
-        mkdir -p app/src/main/java/com/example/data/repository
-        mkdir -p app/src/main/java/com/example/viewmodel
+        mkdir -p app/src/main/java/com/example
         mkdir -p app/src/main/res/values
-        mkdir -p app/src/main/res/drawable
         
-        mv AppDatabase.kt app/src/main/java/com/example/data/db/ 2>/dev/null || true
-        mv KaraokeRepository.kt app/src/main/java/com/example/data/repository/ 2>/dev/null || true
-        mv KaraokeViewModel.kt app/src/main/java/com/example/viewmodel/ 2>/dev/null || true
-        mv Color.kt Theme.kt app/src/main/java/com/example/ui/theme/ 2>/dev/null || true
-        mv KaraokeScreens.kt app/src/main/java/com/example/ui/screens/ 2>/dev/null || true
-        mv MainActivity.kt app/src/main/java/com/example/ 2>/dev/null || true
+        # إنشاء إعدادات التطبيق الداخلي وتفادي نقص الملفات
+        cat << 'EOF' > app/build.gradle.kts
+        plugins {
+            id("com.android.application")
+            id("org.jetbrains.kotlin.android")
+        }
+        android {
+            namespace = "com.example.karaoke"
+            compileSdk = 34
+            defaultConfig {
+                applicationId = "com.example.karaoke"
+                minSdk = 24
+                targetSdk = 34
+                versionCode = 1
+                versionName = "1.0"
+            }
+        }
+        dependencies {
+            implementation("androidx.core:core-ktx:1.13.1")
+            implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
+            implementation("androidx.activity:activity-compose:1.9.0")
+            implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+            implementation("androidx.compose.ui:ui")
+            implementation("androidx.compose.ui:ui-graphics")
+            implementation("androidx.compose.material3:material3")
+        }
+        EOF
+
+        # ترتيب الكود في المسار الصحيح المخصص للبناء
         mv AndroidManifest.xml app/src/main/ 2>/dev/null || true
+        mv *.kt app/src/main/java/com/example/ 2>/dev/null || true
         mv strings.xml app/src/main/res/values/ 2>/dev/null || true
-        mv ic_launcher* app/src/main/res/drawable/ 2>/dev/null || true
-        mv metadata.json app/src/main/res/ 2>/dev/null || true
 
-        curl -s https://raw.githubusercontent.com/android/architecture-samples/main/build.gradle.kts -o build.gradle.kts
-        curl -s https://raw.githubusercontent.com/android/architecture-samples/main/app/build.gradle.kts -o app/build.gradle.kts
-        curl -s https://raw.githubusercontent.com/android/architecture-samples/main/settings.gradle.kts -o settings.gradle.kts
-        gradle wrapper
-
-    - name: Run Build
-      run: |
-        chmod +x gradlew
-        ./gradlew assembleDebug --no-daemon
+    - name: Build APK with Gradle
+      run: gradle assembleDebug
 
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: KaraokeStudioApp
+        name: KaraokeStudioAPK
         path: "**/build/outputs/apk/debug/*.apk"
