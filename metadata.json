@@ -1,0 +1,6 @@
+{
+  "name": "Karaoke Studio",
+  "description": "A professional native Android Karaoke app with synchronized lyrics, multi-lingual translations, audio pitch/speed controls, vocal recording, achievements, and statistics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
