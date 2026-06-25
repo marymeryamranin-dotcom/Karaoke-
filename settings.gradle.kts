@@ -1,27 +1,63 @@
-pluginManagement {
-  repositories {
-    google {
-      content {
-        includeGroupByRegex("com\\.android.*")
-        includeGroupByRegex("com\\.google.*")
-        includeGroupByRegex("androidx.*")
-      }
-    }
-    mavenCentral()
-    gradlePluginPortal()
-  }
-}
+name: Build Android APK
+on:
+  push:
+    branches: [ "main" ]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
 
-plugins { id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0" }
+    - name: set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-dependencyResolutionManagement {
-  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-  repositories {
-    google()
-    mavenCentral()
-  }
-}
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
 
-rootProject.name = "My Application"
+    - name: Organize Files Into App Module
+      run: |
+        mkdir -p app/src/main/java/com/example
+        mkdir -p app/src/main/res/values
+        
+        cat << 'EOF' > app/build.gradle.kts
+        plugins {
+            id("com.android.application")
+            id("org.jetbrains.kotlin.android")
+        }
+        android {
+            namespace = "com.example.karaoke"
+            compileSdk = 34
+            defaultConfig {
+                applicationId = "com.example.karaoke"
+                minSdk = 24
+                targetSdk = 34
+                versionCode = 1
+                versionName = "1.0"
+            }
+        }
+        dependencies {
+            implementation("androidx.core:core-ktx:1.13.1")
+            implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.2")
+            implementation("androidx.activity:activity-compose:1.9.0")
+            implementation(platform("androidx.compose:compose-bom:2024.06.00"))
+            implementation("androidx.compose.ui:ui")
+            implementation("androidx.compose.ui:ui-graphics")
+            implementation("androidx.compose.material3:material3")
+        }
+        EOF
 
-include(":app")
+        mv AndroidManifest.xml app/src/main/ 2>/dev/null || true
+        mv *.kt app/src/main/java/com/example/ 2>/dev/null || true
+        mv strings.xml app/src/main/res/values/ 2>/dev/null || true
+
+    - name: Build APK with Gradle
+      run: gradle assembleDebug
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: KaraokeStudioAPK
+        path: "**/build/outputs/apk/debug/*.apk"
